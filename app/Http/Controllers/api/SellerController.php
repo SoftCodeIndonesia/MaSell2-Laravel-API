@@ -30,6 +30,7 @@ class SellerController extends Controller
 
 
         if($validator->fails()){
+           
             $emailErrorMessage = $validator->errors()->messages()['email'][0];
             $passwordErrorMessage = $validator->errors()->messages()['password'][0];
             return response()->json([
@@ -83,7 +84,7 @@ class SellerController extends Controller
         $sellerId = $request->get("sellerId");
 
         $seller = DB::table('seller')->where('sellerId', $sellerId)->get()->first();
-
+        // var_dump($code);
         if($seller){
 
             if(time() > $seller->emailVerifyIdExpired){
@@ -91,7 +92,7 @@ class SellerController extends Controller
                 return response()->json([
                     "status" => "fails",
                     "message" => 'Expired code!'
-                ], 400);
+                ], 200);
 
             }else{
 
@@ -119,7 +120,7 @@ class SellerController extends Controller
                     return response()->json([
                         "status" => "fails",
                         "message" => 'Invalid code!'
-                    ], 400);
+                    ], 200);
                 }
             }
 
@@ -127,7 +128,7 @@ class SellerController extends Controller
             return response()->json([
                 "status" => "fails",
                 "message" => 'Unautorization seller'
-            ], 400);
+            ], 200);
         }
 
     }
