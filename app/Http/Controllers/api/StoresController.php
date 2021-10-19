@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\api;
 
+use File;
 use App\Models\Stores;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StoreResources;
+use Illuminate\Support\Facades\Storage;
+
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Contracts\Providers\Auth;
 
@@ -16,6 +19,7 @@ class StoresController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
     public function index()
     {
         //
@@ -39,46 +43,24 @@ class StoresController extends Controller
      */
     public function store(Request $request)
     {
+
+        $validator = Validator::make($request->all(), Stores::rules(['name']), Stores::message());
+
+        if($validator->fails()) return badResponse($validator->errors()->first());
         
+        $stores = new Stores;
+        
+        $stores->set($request->all());
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string',
-        ]);
-
-
-        if($validator->fails()){
-            $storeNameErrorMessage = $validator->errors()->messages()['name'][0];
-            return response()->json([
-                "status" => "fails",
-                "message" => $storeNameErrorMessage
-            ], 400);
+        if(!empty($request->file('logo'))){
+            $stores->logo = $request->file('logo')->store('store/logo', 'public');
         }
 
-        $store['name'] = $request->get('name');
-        $store['sellerId'] = auth('seller-api')->id();
-        $store['logo'] = $request->file('logo')->store(
-            'storeLogo', 'public'
-        );
+        $affected = $stores->save();
 
-        $affected = Stores::create($store);
+        if(!$affected) return badResponse('Failed inserting data');
 
-
-        if(!$affected){
-            return response()->json([
-                "status" => "fails",
-                "message" => 'Failed Inserting Data!'
-            ], 400);
-        }
-
-        $storeData = Stores::where('storeId', $affected->storeId)->get();
-
-        if($storeData){
-            return response()->json([
-                "status" => "success",
-                "data" => $storeData,
-                "message" => 'Successfully inserting data!'
-            ], 400);
-        }
+        return response_ok($stores->fetchComplited());
 
     }
 
@@ -88,20 +70,14 @@ class StoresController extends Controller
      * @param  \App\Models\Stores  $stores
      * @return \Illuminate\Http\Response
      */
-    public function show()
+    public function show(Request $request)
     {
-        $sellerId = auth('seller-api')->id();
-
-        $storeData = new StoreResources(Stores::all()->where('sellerId', $sellerId));
         
-       
-        $result = [
-            'status' => 'success',
-            'data' => $storeData,
-            'message' => 'Successfully Retrieving Data.'
-        ];
-
-        return response()->json($result);
+        $stores = new Stores;
+        
+        $stores->set($request->all());
+        
+        return response_ok($stores->fetchComplited());
     }
 
     /**
@@ -110,9 +86,9 @@ class StoresController extends Controller
      * @param  \App\Models\Stores  $stores
      * @return \Illuminate\Http\Response
      */
-    public function edit(Stores $stores)
+    public function edit(Request $request)
     {
-        //
+        
     }
 
     /**
@@ -122,9 +98,25 @@ class StoresController extends Controller
      * @param  \App\Models\Stores  $stores
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Stores $stores)
+    public function update(Request $request)
     {
-        //
+        $validator = Validator::make($request->all(), Stores::rules(['storeId']), Stores::message());
+
+        if($validator->fails()) return badResponse($validator->errors()->first());
+        
+        $stores = new Stores;
+        
+        $stores->storeId = $request->get('storeId');
+
+        $stores = $stores->fetchComplited();
+        
+        $stores->set($request->all());
+        
+        $affected = $stores->save();
+
+        if(!$affected) return badResponse('Failed updating data');
+
+        return response_ok($stores->fetchComplited());
     }
 
     /**
@@ -133,8 +125,28 @@ class StoresController extends Controller
      * @param  \App\Models\Stores  $stores
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Stores $stores)
-    {
-        //
+    public function destroy(Request $request)
+    {  
+        $validator = Validator::make($request->all(), Stores::rules(['storeId']), Stores::message());
+
+        if($validator->fails()) return badResponse($validator->errors()->first());
+
+        $stores = new Stores;
+
+        $storeId = $request->get('storeId');
+
+        foreach ($storeId as $key => $value) {
+            
+            $stores->storeId = $value;
+
+            $data = $stores->fetchComplited();
+
+            $affected = Stores::destroy($value);
+
+            if($affected) Storage::disk('public')->delete($data->logo);
+            
+        }
+
+        return response_ok([]);
     }
 }

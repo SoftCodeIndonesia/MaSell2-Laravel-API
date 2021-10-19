@@ -21,9 +21,15 @@ Route::group([
     Route::post('auth/verification', 'SellerController@verification');
     Route::post('auth/resendCode', 'SellerController@resendCode');
     Route::post('auth/login', 'SellerController@login');
-    Route::get('stores', 'StoresController@show')->middleware('jwt.verify');
     Route::get('auth/refreshToken', 'SellerController@refreshToken');
+
+    Route::get('stores', 'StoresController@show')->middleware('jwt.verify');
     Route::post('stores', 'StoresController@store')->middleware('jwt.verify');
+    Route::put('stores', 'StoresController@update')->middleware('jwt.verify');
+    Route::delete('stores', 'StoresController@destroy')->middleware('jwt.verify');
+
+    Route::post('address', 'AddressController@store')->middleware('jwt.verify');
+
     Route::post('login', 'UserController@login');
     Route::get('book', 'BookController@book');
     

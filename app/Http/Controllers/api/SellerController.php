@@ -1,9 +1,11 @@
 <?php
-
 namespace App\Http\Controllers\api;
+date_default_timezone_set("Asia/Jakarta");
 
 
 use Carbon\Carbon;
+use App\Helpers\Email;
+use App\Helpers\MailType;
 use App\Models\Seller;
 use App\Mail\EmailVerify;
 use Illuminate\Http\Request;
@@ -21,38 +23,40 @@ class SellerController extends Controller
 {
     public function register(Request $request){
 
-        
-
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email|max:255|unique:seller',
             'password' => 'required|string|min:6',
         ]);
 
-
+        
         if($validator->fails()){
-            $emailErrorMessage = $validator->errors()->messages()['email'][0];
-            $passwordErrorMessage = $validator->errors()->messages()['password'][0];
             return response()->json([
-                "status" => "fails",
-                "message" => !empty($emailErrorMessage) ? $emailErrorMessage : $passwordErrorMessage
+                "status" => false,
+                "message" => $validator->errors()->first(),
             ], 400);
         }else{
 
 
             $locationInfo = AppHelper::getLocationInfoByIp();
+            
             $current_date_time = time();
             $deviceId = $request->header("user-agent");
-
+           
             $verifyCode = rand(10000,99999);
 
-            AppHelper::sendEmail($request->get('email'), $verifyCode);
+            
+
+            $seller = new Seller;
 
 
-            $id = DB::table('seller')->insertGetId([
+
+            $seller->set([
+                'sellerId' => generateId(),
+                'username' => uniqid(),
                 'email' => $request->get('email'),
                 'emailVerify' => 0,
                 'emailVerifyId' => $verifyCode,
-                'emailVerifyIdExpired' => $current_date_time + 3000,
+                'emailVerifyIdExpired' => $current_date_time + 60,
                 'countryCode' => $locationInfo['countryCode'],
                 'country' => $locationInfo['countryName'],
                 'registerAt' => $current_date_time,
@@ -63,18 +67,19 @@ class SellerController extends Controller
                 'password' => Hash::make($request->get('password'))
             ]);
 
-            if($id){
-                return response()->json([
-                    "status" => "success",
-                    "message" => 'We send you a code verify to ' . $request->get('email'),
-                    "sellerId" => $id,
-                ], 200);
-            }else{
-                return response()->json([
-                    "status" => "fails",
-                    "message" => 'failed register!!'
-                ], 400);
-            }
+            $affected = $seller->save();
+
+
+            if(!$affected) return badResponse('Failed registed!');
+
+            $email = new Email([
+                'to' => $request->get('email'),
+                'mailType' => Email::verification
+            ]);
+
+            $email->send();
+            
+            return response_ok($seller);
         }
     }
 
@@ -89,7 +94,7 @@ class SellerController extends Controller
             if(time() > $seller->emailVerifyIdExpired){
 
                 return response()->json([
-                    "status" => "fails",
+                    "status" => false,
                     "message" => 'Expired code!'
                 ], 400);
 
@@ -109,7 +114,7 @@ class SellerController extends Controller
                     if($affected){
 
                         return response()->json([
-                            "status" => "success",
+                            "status" => true,
                             "message" => 'Successfully verified!',
                         ], 200);
 
@@ -117,7 +122,7 @@ class SellerController extends Controller
 
                 }else{
                     return response()->json([
-                        "status" => "fails",
+                        "status" => false,
                         "message" => 'Invalid code!'
                     ], 400);
                 }
@@ -125,7 +130,7 @@ class SellerController extends Controller
 
         }else{
             return response()->json([
-                "status" => "fails",
+                "status" => false,
                 "message" => 'Unautorization seller'
             ], 400);
         }
@@ -147,7 +152,7 @@ class SellerController extends Controller
             $sellerIdError = $validator->errors()->messages()['sellerId'][0];
             $emailError = $validator->errors()->messages()['email'][0];
             return response()->json([
-                "status" => "fails",
+                "status" => false,
                 "message" => !empty($sellerIdError) ? $sellerIdError : $emailError
             ], 400);
         }
@@ -166,17 +171,22 @@ class SellerController extends Controller
 
         if($affected){
 
-            AppHelper::sendEmail($email, $verifyCode);
+            $email = new Email([
+                'to' => $email,
+                'mailType' => Email::verification
+            ]);
+
+            $email->send();
 
             return response()->json([
-                "status" => "success",
+                "status" => true,
                 "message" => 'Resend Code Successfully!',
             ], 200);
 
         }else{
 
             return response()->json([
-                "status" => "fails",
+                "status" => true,
                 "message" => 'Resend Code Failed!',
             ], 400);
         }
@@ -200,7 +210,7 @@ class SellerController extends Controller
             return response()->json(['error' => 'could_not_create_token'], 500);
         }
 
-        $status = 'success';
+        $status = true;
         $message = 'Is LoggedIn!';
         $data = [
             "token" => $token,
@@ -214,7 +224,7 @@ class SellerController extends Controller
     {
         $token = auth('seller-api')->refresh();
 
-        $status = 'success';
+        $status = true;
         $message = 'Is LoggedIn!';
         $data = [
             "token" => $token,

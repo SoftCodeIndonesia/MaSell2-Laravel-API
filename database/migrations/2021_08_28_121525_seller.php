@@ -14,7 +14,7 @@ class Seller extends Migration
     public function up()
     {
         Schema::create('seller', function (Blueprint $table) {
-            $table->id('sellerId');
+            $table->string('sellerId', 30)->primary();
             $table->string('username')->nullable();
             $table->string('avatarUrl')->nullable();
             $table->string('email')->unique();

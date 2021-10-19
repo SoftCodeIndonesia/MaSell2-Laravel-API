@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Stores;
+use Illuminate\Http\Request;
 use App\Models\Platforms;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class Platform extends Migration
+class Images extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,12 @@ class Platform extends Migration
      */
     public function up()
     {
-        
-        Schema::create('platforms', function (Blueprint $table) {
-            $table->id('platformId');
-            $table->string('name')->nullable();
-            $table->string('domain')->nullable();
-            $table->string('url')->nullable();
+        Schema::create('images', function (Blueprint $table) {
+            $table->id();
+            $table->string('reference');
+            $table->integer('reference_id');
+            $table->integer('index');
+            $table->integer('url');
             $table->timestamps();
         });
     }
@@ -30,6 +30,6 @@ class Platform extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('platforms');
+        Schema::dropIfExists('images');
     }
 }

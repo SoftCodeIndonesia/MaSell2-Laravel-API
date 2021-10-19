@@ -24,7 +24,7 @@ class AppHelper extends Controller
             $ip = $remote;
         }
         $ip_data = @json_decode(file_get_contents("http://www.geoplugin.net/json.gp?ip=".$ip));
-        
+       
         if($ip_data && $ip_data->geoplugin_countryName != null){
             $result['countryName'] = $ip_data->geoplugin_countryName;
             $result['countryCode'] = $ip_data->geoplugin_countryCode;
@@ -34,11 +34,4 @@ class AppHelper extends Controller
        return $result;
     }
 
-    public static function sendEmail($email, $code){
-        $emailVerifycation = new EmailVerification();
-
-        $emailVerifycation->verifyCode = $code;
-
-        Mail::to($email)->send($emailVerifycation);
-    }
 }
